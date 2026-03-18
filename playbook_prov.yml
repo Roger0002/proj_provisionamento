@@ -1,0 +1,99 @@
+---
+- name: Deploy novo servidor no vcenter com imagme do imagebuilder
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Criando um servidor atraves do template do Vcenter
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ datacenter }}"
+        template: "image"
+        folder: PROV
+        validate_certs: false
+        cluster: servers
+        state: poweredon
+        name: "{{ servername }}"
+        networks:
+          - name: "{{ subnet|trim }}"
+            type: dhcp
+        customization:
+          hostname: "{{ servername }}.contoso.org.br"
+          domain: contoso.org.br
+
+    - name: Coletando qual o ip {{ servername }}
+      ansible.builtin.pause:
+        minutes: 1
+
+    - name: Coletando info do novo {{ servername }} provisionado e registrando no vm_info
+      community.vmware.vmware_guest_info:
+        name: "{{ servername }}"
+        hostname: "{{ vcenter_hostname }}"
+        password: "{{ vcenter_password }}"
+        username: "{{ vcenter_username }}"
+        datacenter: "{{ datacenter }}"
+        validate_certs: no
+      register: vm_info
+      until: vm_info.instance.ipv4 is defined
+      retries: 20
+      delay: 15
+   
+    - name: Mostra se pegou somente o ipv4
+      ansible.builtin.set_fact:
+        vm_ip: "{{ vm_info.instance.ipv4 }}"
+
+    - name: Mostrando na tela o ip
+      ansible.builtin.debug:
+        var: vm_ip
+
+    - name: Adicionando o {{ servername }} a um inventario dinamico no ansible
+      ansible.builtin.add_host:
+        name: "{{ servername }}. xxxxx.org.br"
+        groups: just_created
+
+- name: Conectando no ad para registar dns
+  gather_facts: false
+  hosts: "{{ dnsserver }}"
+  vars:
+    ansible_connection: winrm
+    ansible_winrm_port: 5985
+    ansible_winrm_server_cert_validation: ignore
+    ansible_user: '{{ default_user }}'
+    ansible_password: '{{ default_pass }}'
+  tasks:
+    - name: Registrando {{ servername }}no dns
+      ansible.windows.win_dns_record:
+        name: "{{ servername }}.contoso.org.br"
+        computer_name: "{{ dnsserver }}"
+        type: "A"
+        value: "{{ hostvars['localhost'].vm_ip }}"
+        zone: "xxx.br"        
+
+- name: Registrando servidor {{ servername }} no Satellite
+  hosts: just_created
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    activation_key: xxxxxxxxxxxxxx
+  tasks:
+    - name: debug
+      ansible.builtin.debug:
+        var: inventory_hostname
+
+    - name: Registrando no Satellite com a key
+      ansible.builtin.uri:
+        url: "https://.xxxxxxxxxx.org.br/register?activation_keys={{ activation_key }}&download_utility=curl&force=true&hostgroup_id=5&ignore_subman_errors=true&location_id=2&operatingsystem_id=5&organization_id=1&update_packages=false"
+        method: GET
+        validate_certs: false
+        dest: .
+        headers:
+          Authorization: Bearer {{ token }}
+      register: saida_satellite
+
+    - name: Rregistrado no Satelite
+      ansible.builtin.command:
+        cmd: "bash {{ saida_satellite.path }}"
+
+    - name: Chamando cLallback
+      ansible.builtin.command: /usr/local/sbin/custom-first-boot
