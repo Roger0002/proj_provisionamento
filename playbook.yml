@@ -1,0 +1,23 @@
+---
+- name: Deploy novo servidor no vcenter com imagme do imagebuilder
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Criando um servidor atraves do template do Vcenter
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ datacenter }}"
+        template: "image"
+        folder: PROV
+        validate_certs: false
+        cluster: servers
+        state: poweredon
+        name: "{{ servername }}"
+        networks:
+          - name: "{{ subnet|trim }}"
+            type: dhcp
+        customization:
+          hostname: "{{ servername }}.contoso.org.br"
+          domain: contoso.org.br
