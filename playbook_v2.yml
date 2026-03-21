@@ -107,8 +107,20 @@
       ansible.builtin.command:
         cmd: "bash {{ saida_satellite.path }}"
 
-    - name: Chama o JT de pós-provisionamento (curl)
+    - name: Chama o JT de pós-provisionamento
+      when: false
       ansible.builtin.shell:
         cmd: >
-          curl -k -X POST -d '{"host_config_key": "rogershostconfigkey"}' -H 'Content-Type: application/json' --url 'https://aap.nests.local/api/controller/v2/job_templates/10/callback/'
-...
+          curl -kiX POST -d '{"host_config_key": "rogershostconfigkey"}' -H 'Content-Type: application/json' --url 'https://aap.nests.local/api/controller/v2/job_templates/10/callback/'
+
+    - name: hama o JT de pós-provisionamento (uri)
+      ansible.builtin.uri:
+        url: https://aap.nests.local/api/controller/v2/job_templates/10/callback/
+        method: POST
+        status_code: 201
+        validate_certs: false
+        body_format: json
+        headers:
+          Content-Type: Application/json
+        body:
+          host_config_key: rogershostconfigkey
