@@ -79,7 +79,7 @@
 
 - name: Registrando servidor {{ servidorsn }} no Satellite
   hosts: just_created
-  gather_facts: false
+  gather_facts: true
   become: true
   vars:
     activation_key: RHEL10_AK
@@ -110,5 +110,5 @@
     - name: Chama o JT de pós-provisionamento (curl)
       ansible.builtin.shell:
         cmd: >
-          curl -k -X POST -d '{"host_config_key": "rogershostconfigkey", "limit": "{{ servidorsn }}.nests.local"}' -H 'Content-Type: application/json' --url 'https://aap.nests.local/api/controller/v2/job_templates/10/callback/'
+          curl -k -X POST -d '{"host_config_key": "rogershostconfigkey"}' -H 'Content-Type: application/json' --url 'https://aap.nests.local/api/controller/v2/job_templates/10/callback/'
 ...
