@@ -2,42 +2,44 @@
 - name: Deploy novo servidor no vcenter com imagme do imagebuilder
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - informacoes_sensiveis.txt
   vars:
     ansible_python_interpreter: /usr/bin/python3.9
   tasks:
     - name: Criando um servidor atraves do template do Vcenter
       vmware.vmware.deploy_folder_template:
-        hostname: vcenter.nests.local
-        username: administrator@vsphere.local
-        password: 'Manchester1!'
-        datacenter: meudc
-        vm_name: "{{ servidorsn }}.nests.local"
-        template_name: template.nests.local
+        hostname: "{{ endereco_vcenter }}"
+        username: "{{ usuario_vcenter }}"
+        password: "{{ senha_vcenter }}"
+        datacenter: "{{ datacenter_vcenter }}"
+        vm_name: "{{ servidorsn }}.{{ dominio }}"
+        template_name: "{{ template_vcenter }}"
         validate_certs: false
-        cluster: SuperCluster
-        vm_folder: provisionadas
+        cluster: "{{ cluster_das_vms }}"
+        vm_folder: "{{ diretorio_vcenter }}"
         power_on_after_deploy: false
 
     - name: Altera a interface da VM para portforce
       vmware.vmware.vm:
-        hostname: vcenter.nests.local
-        username: administrator@vsphere.local
-        password: 'Manchester1!'
+        hostname: "{{ endereco_vcenter }}"
+        username: "{{ usuario_vcenter }}"
+        password: "{{ senha_vcenter }}"
+        datacenter: "{{ datacenter_vcenter }}"
         validate_certs: false
-        name: "{{ servidorsn }}.nests.local"
-        datacenter: meudc
+        name: "{{ servidorsn }}.{{ dominio }}"
         network_adapters:
-          - network: portforce
+          - network: "{{ rede_vmware }}"
 
     - name: Liga a VM
       vmware.vmware.vm_powerstate:
-        hostname: vcenter.nests.local
-        username: administrator@vsphere.local
-        password: 'Manchester1!'
-        datacenter: meudc
+        hostname: "{{ endereco_vcenter }}"
+        username: "{{ usuario_vcenter }}"
+        password: "{{ senha_vcenter }}"
+        datacenter: "{{ datacenter_vcenter }}"
         validate_certs: false
-        folder: provisionadas
-        name: "{{ servidorsn }}.nests.local"
+        folder: "{{ diretorio_vcenter }}"
+        name: "{{ servidorsn }}.{{ dominio }}"
         state: powered-on
    
     - name: Coleta as informações da VM recém criada
@@ -47,11 +49,11 @@
       retries: 99
       delay: 1
       vmware.vmware.guest_info:
-        hostname: vcenter.nests.local
-        username: administrator@vsphere.local
-        password: 'Manchester1!'
+        hostname: "{{ endereco_vcenter }}"
+        username: "{{ usuario_vcenter }}"
+        password: "{{ senha_vcenter }}"
+        guest_name: "{{ servidorsn }}.{{ dominio }}"
         validate_certs: false
-        guest_name: "{{ servidorsn }}.nests.local"
       register: informacoes_vm
 
     - name: Define a variável com o IP da máquina
@@ -60,13 +62,14 @@
 
     - name: Adicionando o {{ servidorsn }} a um inventario dinamico no ansible
       ansible.builtin.add_host:
-        name: "{{ servidorsn }}.nests.local"
+        name: "{{ servidorsn }}.{{ dominio }}"
         groups: just_created
 
 - name: Adiciona entrada no DNS
   hosts: idm.nests.local
   gather_facts: false
   vars:
+    ansible_user: root
     ansible_password: '12345678'
   tasks:
     - name: Autentica no domínio
@@ -81,16 +84,12 @@
   hosts: just_created
   gather_facts: true
   become: true
-  vars:
-    activation_key: RHEL10_AK
-    ansible_user: admin
-    ansible_password: '12345678'
-    ansible_become_password: '12345678'
-    token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NzQwNDUyMTUsImp0aSI6IjVlNGFmOGU0YmM2ZDM3MWJhODFkMTRjMzRjYTQwNmY1YTg0YWZjY2ZmYmNjMjZjNDM1Mzc5YzI0ZTllNWUyYzgiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ._yu3AT1Xzy0wqh-xyRrDzeZAkIK7kPE3AZ10RszoP00
+  vars_files:
+    - informacoes_sensiveis.txt
   tasks:
     - name: Seta o hostname da máquina
       ansible.builtin.hostname:
-        name: "{{ servidorsn }}.nests.local"
+        name: "{{ servidorsn }}.{{ dominio }}"
         use: systemd
 
     - name: Obtem o script de registro
@@ -108,12 +107,6 @@
         cmd: "bash {{ saida_satellite.path }}"
 
     - name: Chama o JT de pós-provisionamento
-      when: false
-      ansible.builtin.shell:
-        cmd: >
-          curl -kiX POST -d '{"host_config_key": "rogershostconfigkey"}' -H 'Content-Type: application/json' --url 'https://aap.nests.local/api/controller/v2/job_templates/10/callback/'
-
-    - name: hama o JT de pós-provisionamento (uri)
       ansible.builtin.uri:
         url: https://aap.nests.local/api/controller/v2/job_templates/10/callback/
         method: POST
@@ -123,4 +116,4 @@
         headers:
           Content-Type: Application/json
         body:
-          host_config_key: rogershostconfigkey
+          host_config_key: "{{ hck_callback }}"
