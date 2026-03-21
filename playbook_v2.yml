@@ -82,7 +82,7 @@
 
 - name: Registrando servidor {{ servidorsn }} no Satellite
   hosts: just_created
-  gather_facts: true
+  gather_facts: false
   become: true
   vars_files:
     - informacoes_sensiveis.txt
