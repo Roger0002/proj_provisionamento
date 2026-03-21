@@ -2,6 +2,8 @@
 - name: Deploy novo servidor no vcenter com imagme do imagebuilder
   hosts: localhost
   gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.9
   tasks:
     - name: Criando um servidor atraves do template do Vcenter
       vmware.vmware.deploy_folder_template:

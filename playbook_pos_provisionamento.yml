@@ -1,0 +1,23 @@
+---
+- name: Play de pós provisionamento
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ansible_user: admin
+    ansible_password: '12345678'
+    ansible_become_password: '12345678'
+  tasks:
+    - name: Registra máquina no IdM
+      vars:
+        ipaadmin_principal: admin
+        ipaadmin_password: redhat@123
+        ipaclient_domain: nests.local
+        ipaclient_realm: NESTS.LOCAL
+        ipaclient_servers:
+          - idm.nests.local
+        ipaclient_mkhomedir: true
+      ansible.builtin.include_role:
+        name: freeipa.ansible_freeipa.ipaclient
+
+
