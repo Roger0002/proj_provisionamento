@@ -99,21 +99,24 @@
         validate_certs: false
         dest: .
         headers:
-          Authorization: Bearer {{ token }}
+          Authorization: Bearer {{ token_satellite }}
       register: saida_satellite
 
     - name: Registrado no Satelite
       ansible.builtin.command:
         cmd: "bash {{ saida_satellite.path }}"
 
-    - name: Chama o JT de pós-provisionamento
-      ansible.builtin.uri:
-        url: https://aap.nests.local/api/controller/v2/job_templates/10/callback/
-        method: POST
-        status_code: 201
-        validate_certs: false
-        body_format: json
-        headers:
-          Content-Type: Application/json
-        body:
-          host_config_key: "{{ hck_callback }}"
+    - name: Registra máquina no IdM
+      vars:
+        ipaclient_mkhomedir: true
+      ansible.builtin.include_role:
+        name: freeipa.ansible_freeipa.ipaclient
+
+    - name: Seta o /etc/hosts corretamente
+      ansible.builtin.template:
+        src: files/hosts.j2
+        dest: /etc/hosts
+        mode: '0644'
+        owner: root
+        group: root
+
