@@ -1,0 +1,106 @@
+---
+- name: Deploy novo servidor no vcenter com imagme do imagebuilder
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Criando um servidor atraves do template do Vcenter
+      vmware.vmware.deploy_folder_template:
+        hostname: vcenter.nests.local
+        username: administrator@vsphere.local
+        password: 'Manchester1!'
+        datacenter: meudc
+        vm_name: "{{ servidorsn }}.nests.local"
+        template_name: template.nests.local
+        validate_certs: false
+        cluster: SuperCluster
+        vm_folder: provisionadas
+        power_on_after_deploy: false
+
+    - name: Altera a interface da VM para portforce
+      vmware.vmware.vm:
+        hostname: vcenter.nests.local
+        username: administrator@vsphere.local
+        password: 'Manchester1!'
+        validate_certs: false
+        name: "{{ servidorsn }}.nests.local"
+        datacenter: meudc
+        network_adapters:
+          - network: portforce
+
+    - name: Liga a VM
+      vmware.vmware.vm_powerstate:
+        hostname: vcenter.nests.local
+        username: administrator@vsphere.local
+        password: 'Manchester1!'
+        datacenter: meudc
+        validate_certs: false
+        folder: provisionadas
+        name: "{{ servidorsn }}.nests.local"
+        state: powered-on
+   
+    - name: Coleta as informações da VM recém criada
+      until:
+        - informacoes_vm.guests[0].ipv4 is defined
+        - informacoes_vm.guests[0].ipv4 is not none
+      retries: 99
+      delay: 1
+      vmware.vmware.guest_info:
+        hostname: vcenter.nests.local
+        username: administrator@vsphere.local
+        password: 'Manchester1!'
+        validate_certs: false
+        guest_name: "{{ servidorsn }}.nests.local"
+      register: informacoes_vm
+
+    - name: Define a variável com o IP da máquina
+      ansible.builtin.set_fact:
+        ip_servidor: "{{ informacoes_vm.guests[0].ipv4 }}"
+
+    - name: Adicionando o {{ servername }} a um inventario dinamico no ansible
+      ansible.builtin.add_host:
+        name: "{{ servidorsn }}.nests.local"
+        groups: just_created
+
+- name: Adiciona entrada no DNS
+  hosts: idm.nests.local
+  gather_facts: false
+  vars:
+    ansible_password: '12345678'
+  tasks:
+    - name: Autentica no domínio
+      ansible.builtin.shell: echo 'redhat@123' | kinit admin
+      no_log: true
+
+    - name: Adiciona a máquina no DNS
+      failed_when: false
+      ansible.builtin.command: ipa dnsrecord-add nests.local. {{ servidorsn }} --a-rec {{ hostvars['localhost'].ip_servidor }}
+
+- name: Registrando servidor {{ servidorsn }} no Satellite
+  hosts: just_created
+  gather_facts: false
+  become: true
+  vars:
+    activation_key: RHEL10_AK
+    ansible_user: admin
+    ansible_password: '12345678'
+    ansible_become_password: '12345678'
+    token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NzQwNDUyMTUsImp0aSI6IjVlNGFmOGU0YmM2ZDM3MWJhODFkMTRjMzRjYTQwNmY1YTg0YWZjY2ZmYmNjMjZjNDM1Mzc5YzI0ZTllNWUyYzgiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ._yu3AT1Xzy0wqh-xyRrDzeZAkIK7kPE3AZ10RszoP00
+  tasks:
+    - name: Seta o hostname da máquina
+      ansible.builtin.hostname:
+        name: "{{ servidorsn }}.nests.local"
+        use: systemd
+
+    - name: Obtem o script de registro
+      ansible.builtin.uri:
+        url: "https://satellite.nests.local/register?activation_keys={{ activation_key }}&download_utility=curl&force=true&location_id=2&organization_id=1&setup_insights=true&setup_remote_execution=true&update_packages=false"
+        method: GET
+        validate_certs: false
+        dest: .
+        headers:
+          Authorization: Bearer {{ token }}
+      register: saida_satellite
+
+    - name: Registrado no Satelite
+      ansible.builtin.command:
+        cmd: "bash {{ saida_satellite.path }}"
