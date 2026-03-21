@@ -58,7 +58,7 @@
       ansible.builtin.set_fact:
         ip_servidor: "{{ informacoes_vm.guests[0].ipv4 }}"
 
-    - name: Adicionando o {{ servername }} a um inventario dinamico no ansible
+    - name: Adicionando o {{ servidorsn }} a um inventario dinamico no ansible
       ansible.builtin.add_host:
         name: "{{ servidorsn }}.nests.local"
         groups: just_created
@@ -106,3 +106,14 @@
     - name: Registrado no Satelite
       ansible.builtin.command:
         cmd: "bash {{ saida_satellite.path }}"
+
+    - name: Chama o JT de pós-provisionamento
+      ansible.builtin.uri:
+        url: https://aap.nests.local/api/controller/v2/job_templates/10/callback/
+        method: POST
+        validate_certs: false
+        body_format: json
+        headers:
+          Content-Type: Application/json
+        body:
+          host_config_key: rogershostconfigkey
