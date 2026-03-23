@@ -106,12 +106,6 @@
       ansible.builtin.command:
         cmd: "bash {{ saida_satellite.path }}"
 
-    - name: Registra máquina no IdM
-      vars:
-        ipaclient_mkhomedir: true
-      ansible.builtin.include_role:
-        name: freeipa.ansible_freeipa.ipaclient
-
     - name: Seta o /etc/hosts corretamente
       ansible.builtin.template:
         src: files/hosts.j2
@@ -120,3 +114,24 @@
         owner: root
         group: root
 
+    - name: Faz o update de SO, se houver atualizações disponíveis
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+
+    - name: Testa necessidade de reboot, reiniciando se houver
+      block:
+        - name: Executa o needs-restarting
+          ansible.builtin.command: needs-restarting -r
+          changed_when: false
+
+      rescue:
+        - name: Reinicia a máquina
+          ansible.builtin.reboot:
+
+    - name: Registra máquina no IdM
+      vars:
+        ipaclient_mkhomedir: true
+      ansible.builtin.include_role:
+        name: freeipa.ansible_freeipa.ipaclient
+...
