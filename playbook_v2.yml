@@ -7,8 +7,6 @@
   vars:
     ansible_python_interpreter: /usr/bin/python3.9
   tasks:
-    - debug:
-        var: escolha_so
     - name: Criando um servidor atraves do template do Vcenter
       vmware.vmware.deploy_folder_template:
         hostname: "{{ endereco_vcenter }}"
