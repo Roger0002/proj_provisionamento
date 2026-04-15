@@ -14,7 +14,7 @@
         password: "{{ senha_vcenter }}"
         datacenter: "{{ datacenter_vcenter }}"
         vm_name: "{{ servidorsn }}.{{ dominio }}"
-        template_name: "{{ template_vcenter }}"
+        template_name: templaterhel{{ '10' if escolha_so == 'RHEL 10' else '9' if escolha_so == 'RHEL 9' else '8' }}.nests.local
         validate_certs: false
         cluster: "{{ cluster_das_vms }}"
         vm_folder: "{{ diretorio_vcenter }}"
@@ -94,7 +94,7 @@
 
     - name: Obtem o script de registro
       ansible.builtin.uri:
-        url: "https://satellite.nests.local/register?activation_keys={{ activation_key }}&download_utility=curl&force=true&location_id=2&organization_id=1&setup_insights=true&setup_remote_execution=true&update_packages=false"
+        url: "https://satellite.nests.local/register?activation_keys=RHEL{{ '10' if escolha_so == 'RHEL 10' else '9' if escolha_so == 'RHEL 9' else '8' }}_AK&download_utility=curl&force=true&location_id=2&organization_id=1&setup_insights=true&setup_remote_execution=true&update_packages=false"
         method: GET
         validate_certs: false
         dest: .
