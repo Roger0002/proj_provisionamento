@@ -73,7 +73,7 @@
     ansible_password: '12345678'
   tasks:
     - name: Autentica no domínio
-      ansible.builtin.shell: echo 'redhat@123' | kinit admin
+      ansible.builtin.shell: echo 'redhat123' | kinit admin
       no_log: true
 
     - name: Adiciona a máquina no DNS
