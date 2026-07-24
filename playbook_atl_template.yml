@@ -7,7 +7,8 @@
   vars:
     ansible_connection: local
   tasks:
-    - name: Obtem o access token
+    - name: Obtem o access tokenA
+      when: false
       ansible.builtin.uri:
         url: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
         method: POST
@@ -20,6 +21,7 @@
       register: saida_com_access_token
 
     - name: Realiza o build
+      when: false
       ansible.builtin.uri:
         url: https://console.redhat.com/api/image-builder/v1/compose
         src: compose2.json
@@ -32,6 +34,7 @@
       register: saida_com_id
 
     - name: Aguarda o término do build
+      when: false
       until:
         - saida_com_url_download.json.image_status.status == 'success'
         - saida_com_url_download.json.image_status is defined
@@ -47,13 +50,26 @@
       register: saida_com_url_download
 
     - name: Realiza o download
+      when: false
       vars:
         ansible_connection: ssh
       delegate_to: aap.nests.local
       ansible.builtin.get_url:
         url: "{{ saida_com_url_download.json.image_status.upload_status.options.url }}"
-        dest: /root/disco.vmdk
+        dest: /tmp/discotmp.vmdk
         mode: 0644
+
+    - name: Envia para o Datastore
+      vars:
+        ansible_connection: ssh
+      delegate_to: aap.nests.local
+      community.vmware.vsphere_copy:
+        hostname: 192.168.212.18
+        username: 'administrator@vsphere.local'
+        password: 'Mud@r!23'
+        src: /tmp/discotmp.vmdk
+        datacenter: meudc
+        datastore: secdstore
 
 # Próximos módulos
 # community.vmware.vsphere_copy
