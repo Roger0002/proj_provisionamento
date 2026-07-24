@@ -47,6 +47,8 @@
       register: saida_com_url_download
 
     - name: Realiza o download
+      vars:
+        ansible_connection: ssh
       delegate_to: aap.nests.local
       ansible.builtin.get_url:
         url: "{{ saida_com_url_download.json.image_status.upload_status.options.url }}"
