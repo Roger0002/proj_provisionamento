@@ -1,0 +1,35 @@
+{
+  "client_id": "ui",
+  "customizations": {
+    "locale": {
+      "languages": [
+        "C.UTF-8"
+      ]
+    },
+    "timezone": {
+      "timezone": "Etc/UTC"
+    },
+    "users": [
+      {
+        "groups": [
+          "wheel"
+        ],
+        "hasPassword": true,
+        "name": "roger"
+      }
+    ]
+  },
+  "distribution": "rhel-10",
+  "image_description": "",
+  "image_name": "image-rhel10",
+  "image_requests": [
+    {
+      "architecture": "x86_64",
+      "image_type": "guest-image",
+      "upload_request": {
+        "options": {},
+        "type": "aws.s3"
+      }
+    }
+  ]
+}
