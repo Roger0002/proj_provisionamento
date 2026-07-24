@@ -1,0 +1,63 @@
+---
+- name: Play
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - dados_sensiveis.txt
+  vars:
+    ansible_connection: local
+  tasks:
+    - name: Obtem o access token
+      ansible.builtin.uri:
+        url: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+        method: POST
+        body_format: form-urlencoded
+        body:
+          grant_type: refresh_token
+          client_id: rhsm-api
+          refresh_token: "{{ offline_token }}"
+        return_content: true
+      register: saida_com_access_token
+
+    - name: Realiza o build
+      ansible.builtin.uri:
+        url: https://console.redhat.com/api/image-builder/v1/compose
+        src: compose2.json
+        status_code: 201
+        method: POST
+        body_format: json
+        headers:
+          accept: application/json
+          Authorization: Bearer {{ saida_com_access_token.json.access_token }}
+      register: saida_com_id
+
+    - name: Aguarda o término do build
+      until:
+        - saida_com_url_download.json.image_status.status == 'success'
+        - saida_com_url_download.json.image_status is defined
+      retries: 9999
+      delay: 1
+      ansible.builtin.uri:
+        url: https://console.redhat.com/api/image-builder/v1/composes/{{ saida_com_id.json.id }}
+        method: GET
+        body_format: json
+        headers:
+          accept: application/json
+          Authorization: Bearer {{ saida_com_access_token.json.access_token }}
+      register: saida_com_url_download
+
+    - name: Realiza o download
+      delegate_to: aap.nests.local
+      ansible.builtin.get_url:
+        url: "{{ saida_com_url_download.json.image_status.upload_status.options.url }}"
+        dest: /tmp/disco.vmdk
+        mode: 0644
+
+# Próximos módulos
+# community.vmware.vsphere_copy
+# community.vmware.vmware_datastore_info
+# community.vmware.vmware_host_datastore
+# vmware.vmware.folder_template_from_vm
+# vmware.vmware.vm
+...
+
