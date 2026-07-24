@@ -50,7 +50,7 @@
       delegate_to: aap.nests.local
       ansible.builtin.get_url:
         url: "{{ saida_com_url_download.json.image_status.upload_status.options.url }}"
-        dest: /tmp/disco.vmdk
+        dest: /root/disco.vmdk
         mode: 0644
 
 # Próximos módulos
