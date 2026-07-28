@@ -80,7 +80,7 @@
       delegate_to: aap.nests.local
       vars:
         ansible_connection: ssh
-      ansible.builtin.shell: /usr/bin/govc datastore.upload -u="administrator@vsphere.local:Mud@r!23@192.168.212.18" -k=true -dc="meudc" -ds="secdstore" /tmp/discotmp.vmdk .
+      ansible.builtin.shell: /usr/bin/govc datastore.upload -u='administrator@vsphere.local:Mud@r!23@192.168.212.18' -k=true -dc="meudc" -ds="secdstore" /tmp/discotmp.vmdk ./discotmp.vmdk
 
 
   # Próximos módulos
