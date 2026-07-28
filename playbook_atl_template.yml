@@ -60,6 +60,7 @@
         mode: 0644
 
     - name: Envia para o Datastore
+      when: false
       vars:
         ansible_connection: ssh
       delegate_to: aap.nests.local
@@ -75,7 +76,14 @@
         datacenter: meudc
         datastore: secdstore
 
-# Próximos módulos
+    - name: Envia para o Datastore
+      delegate_to: aap.nests.local
+      vars:
+        ansible_connection: ssh
+      ansible.builtin.shell: govc datastore.upload -u="administrator@vsphere.local:Mud@r!23@192.168.212.18" -k=true -dc="meudc" -ds="secdstore" /tmp/discotmp.vmdk .
+
+
+  # Próximos módulos
 # community.vmware.vsphere_copy
 # community.vmware.vmware_datastore_info
 # community.vmware.vmware_host_datastore
