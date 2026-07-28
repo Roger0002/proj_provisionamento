@@ -66,6 +66,7 @@
       community.vmware.vsphere_copy:
         path: .
         hostname: "192.168.212.18"
+        validate_certs: false
         username: 'administrator@vsphere.local'
         password: 'Mud@r!23'
         src: /tmp/discotmp.vmdk
