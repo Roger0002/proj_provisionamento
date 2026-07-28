@@ -65,7 +65,7 @@
       delegate_to: aap.nests.local
       community.vmware.vsphere_copy:
         path: .
-        hostname: '192.168.212.18'
+        hostname: https://192.168.212.18
         username: 'administrator@vsphere.local'
         password: 'Mud@r!23'
         src: /tmp/discotmp.vmdk
